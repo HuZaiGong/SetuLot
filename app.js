@@ -2,7 +2,11 @@
 //  Lolicon API v2 — 随机色图 Web 客户端
 // =============================================
 
-const API_URL = "https://api.lolicon.app/setu/v2";
+// 使用 CORS 代理（推荐自建，公共代理仅供开发测试）
+const API_BASE = "https://api.lolicon.app/setu/v2";
+const CORS_PROXY = "https://corsproxy.io/?";
+const API_URL = CORS_PROXY + encodeURIComponent(API_BASE);
+
 
 // DOM 节点
 const fetchBtn = document.getElementById("fetchBtn");
@@ -217,17 +221,21 @@ async function fetchSetu() {
   try {
     const params = buildParams();
 
+    // ——— 关键改动：用 no-cors 模式 + 文本解析 ———
     const response = await fetch(API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
       body: JSON.stringify(params),
+      // 注意：corsproxy.io 配合 POST 时需用 mode: 'cors'
+      // 如果仍失败，改用下方的纯文本方案
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP 错误：${response.status} ${response.statusText}`);
-    }
-
-    const json = await response.json();
+    // 经过 corsproxy.io 代理后，响应被包装成字符串
+    const text = await response.text();
+    const json = JSON.parse(text);
 
     if (json.error) {
       throw new Error(`API 错误：${json.error}`);
@@ -243,6 +251,7 @@ async function fetchSetu() {
     setLoading(false);
   }
 }
+
 
 // ——— 事件绑定 ———
 fetchBtn.addEventListener("click", fetchSetu);
