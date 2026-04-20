@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lolicon API 随机色图</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <!-- 标题 -->
+      <h1 class="title">🎨 随机色图 Lolicon API</h1>
+
+      <!-- 参数配置区域 -->
+      <section class="params-panel">
+        <h2>⚙️ 参数配置</h2>
+
+        <div class="params-grid">
+          <!-- R18 -->
+          <div class="param-item">
+            <label for="r18">R18 模式</label>
+            <select id="r18">
+              <option value="0">非 R18</option>
+              <option value="1">R18</option>
+              <option value="2">混合</option>
+            </select>
+          </div>
+
+          <!-- 数量 -->
+          <div class="param-item">
+            <label for="num">返回数量 (1~20)</label>
+            <input type="number" id="num" min="1" max="20" value="1" />
+          </div>
+
+          <!-- 关键词 -->
+          <div class="param-item">
+            <label for="keyword">关键词 (keyword)</label>
+            <input type="text" id="keyword" placeholder="例：猫耳、白丝" />
+          </div>
+
+          <!-- 标签 -->
+          <div class="param-item">
+            <label for="tag">
+              标签 (tag)
+              <span class="tip">多个标签用英文逗号分隔；OR 规则用 | 隔开</span>
+            </label>
+            <input
+              type="text"
+              id="tag"
+              placeholder="例：萝莉|少女, 白丝|黑丝"
+            />
+          </div>
+
+          <!-- 图片规格 -->
+          <div class="param-item">
+            <label>图片规格 (size)</label>
+            <div class="checkbox-group">
+              <label
+                ><input type="checkbox" name="size" value="original" checked />
+                original</label
+              >
+              <label
+                ><input type="checkbox" name="size" value="regular" />
+                regular</label
+              >
+              <label
+                ><input type="checkbox" name="size" value="small" />
+                small</label
+              >
+              <label
+                ><input type="checkbox" name="size" value="thumb" />
+                thumb</label
+              >
+              <label
+                ><input type="checkbox" name="size" value="mini" /> mini</label
+              >
+            </div>
+          </div>
+
+          <!-- 排除AI -->
+          <div class="param-item">
+            <label for="excludeAI">排除 AI 作品</label>
+            <select id="excludeAI">
+              <option value="false">否</option>
+              <option value="true">是</option>
+            </select>
+          </div>
+
+          <!-- 长宽比 -->
+          <div class="param-item">
+            <label for="aspectRatio">
+              长宽比 (aspectRatio)
+              <span class="tip">例：gt1（横图）、lt1（竖图）、eq1（正方形）</span>
+            </label>
+            <input type="text" id="aspectRatio" placeholder="例：gt1.7lt1.8" />
+          </div>
+
+          <!-- 代理 -->
+          <div class="param-item">
+            <label for="proxy">
+              图片代理 (proxy)
+              <span class="tip">默认 i.pixiv.re</span>
+            </label>
+            <input
+              type="text"
+              id="proxy"
+              value="i.pixiv.re"
+              placeholder="例：i.pixiv.re"
+            />
+          </div>
+        </div>
+      </section>
+
+      <!-- 核心按钮 -->
+      <div class="btn-wrapper">
+        <button id="fetchBtn" class="fetch-btn">
+          <span class="btn-icon">✨</span>
+          <span class="btn-text">获取色图</span>
+        </button>
+      </div>
+
+      <!-- 状态提示 -->
+      <div id="statusMsg" class="status-msg hidden"></div>
+
+      <!-- 图片展示区域 -->
+      <section class="gallery" id="gallery">
+        <div class="gallery-placeholder" id="galleryPlaceholder">
+          <span>🖼️</span>
+          <p>点击上方按钮获取图片</p>
+        </div>
+      </section>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
