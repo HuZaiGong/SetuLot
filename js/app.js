@@ -47,11 +47,24 @@ async function fetchSetu(params = {}) {
   }
   
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    
     const response = await fetch(API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestParams)
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(requestParams),
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
     
     const data = await response.json();
     
@@ -62,6 +75,12 @@ async function fetchSetu(params = {}) {
     return data.data || [];
   } catch (error) {
     console.error('API Error:', error);
+    if (error.name === 'AbortError') {
+      throw new Error('请求超时，请检查网络连接');
+    }
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      throw new Error('网络请求失败，请检查网络或尝试使用代理/VPN');
+    }
     throw error;
   }
 }
