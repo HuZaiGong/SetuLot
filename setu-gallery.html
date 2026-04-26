@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Setu Gallery - 随机插画浏览</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              DEFAULT: '#6C63FF',
+              dark: '#7C73FF'
+            },
+            dark: {
+              bg: '#0A0A0F',
+              card: '#1A1A2E',
+              text: '#E8E8F0'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'Noto Sans SC', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif; }
+    .masonry { column-count: 2; column-gap: 1rem; }
+    @media (min-width: 640px) { .masonry { column-count: 3; } }
+    @media (min-width: 768px) { .masonry { column-count: 4; } }
+    @media (min-width: 1024px) { .masonry { column-count: 5; } }
+    .masonry-item { break-inside: avoid; margin-bottom: 1rem; }
+    .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
+    .dark .glass { background: rgba(0,0,0,0.3); }
+    .blur-r18 { filter: blur(20px); transition: filter 0.3s; }
+    .blur-r18:hover { filter: blur(0); }
+    .fade-in { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .skeleton { background: linear-gradient(90deg, #eee 25%, #f5f5f5 50%, #eee 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+    .dark .skeleton { background: linear-gradient(90deg, #333 25%, #444 50%, #333 75%); background-size: 200% 100%; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #6C63FF; cursor: pointer; }
+    .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-gray-50 dark:bg-dark-bg text-gray-900 dark:text-dark-text min-h-screen transition-colors">
+  <div id="app" class="min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="sticky top-0 z-40 glass border-b border-gray-200 dark:border-gray-800">
+      <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">Setu Gallery</h1>
+        </div>
+        
+        <!-- Search Bar -->
+        <div class="flex-1 max-w-md">
+          <div class="relative">
+            <input type="text" id="searchInput" placeholder="搜索标签、作者..." 
+              class="w-full px-4 py-2 pl-10 bg-gray-100 dark:bg-dark-card rounded-xl border border-transparent focus:border-primary focus:bg-white dark:focus:bg-dark-card transition-all outline-none">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-2">
+          <button id="refreshBtn" class="p-2 hover:bg-gray-100 dark:hover:bg-dark-card rounded-lg transition-colors" title="换一换">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+          </button>
+          <button id="themeToggle" class="p-2 hover:bg-gray-100 dark:hover:bg-dark-card rounded-lg transition-colors" title="切换主题">
+            <svg class="w-5 h-5 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+            </svg>
+            <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+    
+    <!-- Filter Panel -->
+    <div class="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-dark-bg">
+      <div class="max-w-7xl mx-auto px-4 py-3">
+        <div class="flex flex-wrap items-center gap-4">
+          <!-- R18 Mode -->
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-500">R18:</span>
+            <select id="r18Select" class="px-3 py-1.5 bg-gray-100 dark:bg-dark-card rounded-lg text-sm border-none outline-none cursor-pointer">
+              <option value="0">非R18</option>
+              <option value="1">仅R18</option>
+              <option value="2">混合</option>
+            </select>
+          </div>
+          
+          <!-- Num -->
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-500">数量:</span>
+            <input type="number" id="numInput" min="1" max="20" value="10" 
+              class="w-16 px-3 py-1.5 bg-gray-100 dark:bg-dark-card rounded-lg text-sm border-none outline-none">
+          </div>
+          
+          <!-- Aspect Ratio -->
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-500">比例:</span>
+            <select id="aspectSelect" class="px-3 py-1.5 bg-gray-100 dark:bg-dark-card rounded-lg text-sm border-none outline-none cursor-pointer">
+              <option value="">全部</option>
+              <option value="lt1">竖图</option>
+              <option value="gt1">横图</option>
+              <option value="eq1">正方形</option>
+            </select>
+          </div>
+          
+          <!-- AI Filter -->
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="excludeAI" class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary">
+            <span class="text-sm">排除AI</span>
+          </label>
+          
+          <!-- Apply Button -->
+          <button id="applyFilter" class="px-4 py-1.5 bg-primary text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">
+            应用筛选
+          </button>
+        </div>
+        
+        <!-- Tags -->
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          <span class="text-sm text-gray-500">标签:</span>
+          <input type="text" id="tagInput" placeholder="输入标签，回车添加" 
+            class="px-3 py-1.5 bg-gray-100 dark:bg-dark-card rounded-lg text-sm border-none outline-none w-48">
+          <div id="tagList" class="flex flex-wrap gap-2"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 py-6 w-full">
+      <div id="gallery" class="masonry">
+        <!-- Images will be loaded here -->
+      </div>
+      
+      <!-- Loading -->
+      <div id="loading" class="hidden py-12 text-center">
+        <div class="inline-flex items-center gap-2">
+          <svg class="animate-spin w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <span class="text-gray-500">加载中...</span>
+        </div>
+      </div>
+      
+      <!-- Empty State -->
+      <div id="emptyState" class="hidden py-20 text-center">
+        <svg class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+        <p class="text-gray-500">没有找到符合条件的作品</p>
+      </div>
+      
+      <!-- Error State -->
+      <div id="errorState" class="hidden py-20 text-center">
+        <svg class="w-16 h-16 mx-auto text-red-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <p id="errorMsg" class="text-red-500">加载失败</p>
+        <button id="retryBtn" class="mt-4 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">
+          重试
+        </button>
+      </div>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="border-t border-gray-200 dark:border-gray-800 py-4 text-center text-sm text-gray-500">
+      <p>基于 Lolicon API v2 • 图片版权归原作者所有</p>
+    </footer>
+  </div>
+  
+  <!-- Image Modal -->
+  <div id="imageModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" id="modalBackdrop"></div>
+    <div class="absolute inset-4 md:inset-10 flex items-center justify-center">
+      <button id="modalClose" class="absolute top-4 right-4 z-10 p-2 text-white/70 hover:text-white transition-colors">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+      <button id="prevImage" class="absolute left-4 z-10 p-2 text-white/70 hover:text-white transition-colors">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </button>
+      <button id="nextImage" class="absolute right-4 z-10 p-2 text-white/70 hover:text-white transition-colors">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+      </button>
+      
+      <div class="relative max-w-full max-h-full flex flex-col">
+        <img id="modalImage" class="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl" src="" alt="">
+        
+        <div class="mt-4 glass rounded-xl p-4 text-white">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h3 id="modalTitle" class="font-semibold text-lg"></h3>
+              <p id="modalAuthor" class="text-white/70 text-sm mt-1"></p>
+              <div class="flex flex-wrap gap-2 mt-2">
+                <span id="modalR18" class="hidden px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full">R18</span>
+                <span id="modalAI" class="hidden px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded-full">AI</span>
+                <span id="modalSize" class="px-2 py-0.5 bg-gray-500/20 text-gray-400 text-xs rounded-full"></span>
+              </div>
+              <div class="flex flex-wrap gap-1 mt-2" id="modalTags"></div>
+            </div>
+            <div class="flex gap-2">
+              <button id="modalDownload" class="p-2 hover:bg-white/10 rounded-lg transition-colors" title="下载">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+              </button>
+              <button id="modalFavorite" class="p-2 hover:bg-white/10 rounded-lg transition-colors" title="收藏">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Size Selector -->
+          <div class="mt-4 pt-4 border-t border-white/10">
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-white/70">规格:</span>
+              <select id="sizeSelect" class="px-3 py-1.5 bg-white/10 rounded-lg text-sm border-none outline-none">
+                <option value="original">原图</option>
+                <option value="regular" selected>regular</option>
+                <option value="small">small</option>
+                <option value="thumb">thumb</option>
+                <option value="mini">mini</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- R18 Confirm Modal -->
+  <div id="r18Modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="bg-white dark:bg-dark-card rounded-2xl p-6 max-w-sm text-center shadow-2xl">
+        <svg class="w-16 h-16 mx-auto text-yellow-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+        <h2 class="text-xl font-bold mb-2">年龄确认</h2>
+        <p class="text-gray-500 mb-6">此页面包含成人内容，请确认您已年满18岁。</p>
+        <div class="flex gap-3">
+          <button id="r18Cancel" class="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+            我未满18岁
+          </button>
+          <button id="r18Confirm" class="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition-opacity">
+            我已年满18岁
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-4 right-4 z-50 hidden">
+    <div class="glass rounded-xl px-4 py-3 shadow-lg text-sm fade-in"></div>
+  </div>
+
+  <script>
+    const API_URL = 'https://api.lolicon.app/setu/v2';
+    
+    // State
+    let state = {
+      images: [],
+      currentIndex: 0,
+      tags: [],
+      favorites: JSON.parse(localStorage.getItem('setu_favorites') || '[]'),
+      theme: localStorage.getItem('setu_theme') || (localStorage.getItem('setu_theme') === null ? 'dark' : 'dark'),
+      r18Confirmed: localStorage.getItem('setu_r18_confirmed') === 'true',
+      proxy: 'i.pixiv.re'
+    };
+    
+    // DOM Elements
+    const elements = {
+      gallery: document.getElementById('gallery'),
+      loading: document.getElementById('loading'),
+      emptyState: document.getElementById('emptyState'),
+      errorState: document.getElementById('errorState'),
+      errorMsg: document.getElementById('errorMsg'),
+      imageModal: document.getElementById('imageModal'),
+      r18Modal: document.getElementById('r18Modal'),
+      toast: document.getElementById('toast'),
+      modalImage: document.getElementById('modalImage'),
+      modalTitle: document.getElementById('modalTitle'),
+      modalAuthor: document.getElementById('modalAuthor'),
+      modalTags: document.getElementById('modalTags'),
+      modalR18: document.getElementById('modalR18'),
+      modalAI: document.getElementById('modalAI'),
+      modalSize: document.getElementById('modalSize'),
+      tagList: document.getElementById('tagList')
+    };
+    
+    // API Functions
+    async function fetchSetu(params = {}) {
+      const defaultParams = {
+        num: 10,
+        r18: 0,
+        size: ['regular', 'original'],
+        proxy: 'i.pixiv.re'
+      };
+      
+      const requestParams = { ...defaultParams, ...params };
+      
+      if (requestParams.tag && requestParams.tag.length > 0) {
+        // Convert string array to OR format
+        requestParams.tag = requestParams.tag.map(t => t.split('|')[0]);
+      }
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestParams)
+        });
+        
+        const data = await response.json();
+        
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        
+        return data.data || [];
+      } catch (error) {
+        console.error('API Error:', error);
+        throw error;
+      }
+    }
+    
+    // Render Functions
+    function renderImages(images) {
+      if (images.length === 0) {
+        elements.gallery.classList.add('hidden');
+        elements.emptyState.classList.remove('hidden');
+        return;
+      }
+      
+      elements.emptyState.classList.add('hidden');
+      elements.gallery.classList.remove('hidden');
+      elements.gallery.innerHTML = images.map((img, index) => {
+        const url = img.urls.regular || img.urls.small || img.urls.thumb || img.urls.mini || Object.values(img.urls)[0];
+        const isFavorite = state.favorites.includes(img.pid);
+        const aspectRatio = img.height / img.width;
+        const height = Math.round(200 / aspectRatio);
+        
+        return `
+          <div class="masonry-item fade-in" style="animation-delay: ${index * 50}ms">
+            <div class="relative group cursor-pointer rounded-xl overflow-hidden bg-gray-200 dark:bg-dark-card hover:shadow-xl transition-shadow"
+              onclick="openModal(${index})">
+              <img src="${url}" alt="${img.title}" loading="lazy"
+                class="w-full ${img.r18 && !state.r18Confirmed ? 'blur-r18' : ''}"
+                style="height: ${height}px; object-fit: cover;">
+              
+              <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                <div class="absolute bottom-0 left-0 right-0 p-3">
+                  <p class="text-white font-medium text-sm truncate">${img.title}</p>
+                  <p class="text-white/70 text-xs truncate">${img.author}</p>
+                </div>
+              </div>
+              
+              ${img.r18 ? '<span class="absolute top-2 left-2 px-2 py-0.5 bg-red-500/80 text-white text-xs rounded-full">R18</span>' : ''}
+              ${img.aiType === 2 ? '<span class="absolute top-2 right-2 px-2 py-0.5 bg-blue-500/80 text-white text-xs rounded-full">AI</span>' : ''}
+              <button class="absolute top-2 right-2 p-1.5 bg-black/30 rounded-full opacity-0 group-hover:opacity-100 transition-opacity ${isFavorite ? 'opacity-100' : ''}"
+                onclick="event.stopPropagation(); toggleFavorite(${img.pid})">
+                <svg class="w-4 h-4 ${isFavorite ? 'text-red-500 fill-red-500' : 'text-white'}" fill="${isFavorite ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function renderTagList() {
+      elements.tagList.innerHTML = state.tags.map((tag, index) => `
+        <span class="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-sm rounded-full">
+          ${tag}
+          <button onclick="removeTag(${index})" class="hover:text-red-500">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </span>
+      `).join('');
+    }
+    
+    // Modal Functions
+    function openModal(index) {
+      state.currentIndex = index;
+      updateModalContent();
+      elements.imageModal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+    
+    function closeModal() {
+      elements.imageModal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+    
+    function updateModalContent() {
+      const img = state.images[state.currentIndex];
+      if (!img) return;
+      
+      const size = document.getElementById('sizeSelect').value;
+      const url = img.urls[size] || img.urls.original || Object.values(img.urls)[0];
+      
+      elements.modalImage.src = url;
+      elements.modalTitle.textContent = img.title;
+      elements.modalAuthor.textContent = `${img.author} • ${img.width}×${img.height}`;
+      elements.modalSize.textContent = size;
+      
+      elements.modalR18.classList.toggle('hidden', !img.r18);
+      elements.modalAI.classList.toggle('hidden', img.aiType !== 2);
+      
+      elements.modalTags.innerHTML = img.tags.slice(0, 10).map(tag => 
+        `<span class="px-2 py-0.5 bg-white/10 text-white/70 text-xs rounded-full">${tag}</span>`
+      ).join('');
+      
+      const isFavorite = state.favorites.includes(img.pid);
+      const favBtn = document.getElementById('modalFavorite');
+      if (isFavorite) {
+        favBtn.querySelector('svg').classList.add('fill-red-500', 'text-red-500');
+      } else {
+        favBtn.querySelector('svg').classList.remove('fill-red-500', 'text-red-500');
+      }
+    }
+    
+    function navigateModal(direction) {
+      const newIndex = state.currentIndex + direction;
+      if (newIndex >= 0 && newIndex < state.images.length) {
+        state.currentIndex = newIndex;
+        updateModalContent();
+      }
+    }
+    
+    // Favorites
+    function toggleFavorite(pid) {
+      const index = state.favorites.indexOf(pid);
+      if (index === -1) {
+        state.favorites.push(pid);
+        showToast('已添加到收藏');
+      } else {
+        state.favorites.splice(index, 1);
+        showToast('已取消收藏');
+      }
+      localStorage.setItem('setu_favorites', JSON.stringify(state.favorites));
+      renderImages(state.images);
+    }
+    
+    // Tags
+    function addTag(tag) {
+      if (tag && !state.tags.includes(tag) && state.tags.length < 6) {
+        state.tags.push(tag);
+        renderTagList();
+      }
+    }
+    
+    function removeTag(index) {
+      state.tags.splice(index, 1);
+      renderTagList();
+    }
+    
+    // Toast
+    function showToast(message) {
+      const toast = elements.toast;
+      toast.querySelector('div').textContent = message;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 2000);
+    }
+    
+    // Theme
+    function toggleTheme() {
+      state.theme = state.theme === 'dark' ? 'light' : 'dark';
+      document.documentElement.classList.toggle('dark', state.theme === 'dark');
+      localStorage.setItem('setu_theme', state.theme);
+    }
+    
+    // Load Data
+    async function loadImages() {
+      elements.loading.classList.remove('hidden');
+      elements.gallery.classList.add('hidden');
+      elements.emptyState.classList.add('hidden');
+      elements.errorState.classList.add('hidden');
+      
+      try {
+        const params = {
+          num: parseInt(document.getElementById('numInput').value) || 10,
+          r18: parseInt(document.getElementById('r18Select').value),
+          keyword: document.getElementById('searchInput').value,
+          tag: state.tags.length > 0 ? state.tags : undefined,
+          aspectRatio: document.getElementById('aspectSelect').value,
+          excludeAI: document.getElementById('excludeAI').checked
+        };
+        
+        const data = await fetchSetu(params);
+        state.images = data;
+        renderImages(data);
+      } catch (error) {
+        elements.errorMsg.textContent = error.message || '加载失败';
+        elements.errorState.classList.remove('hidden');
+      } finally {
+        elements.loading.classList.add('hidden');
+      }
+    }
+    
+    // Event Listeners
+    document.getElementById('refreshBtn').addEventListener('click', loadImages);
+    document.getElementById('applyFilter').addEventListener('click', loadImages);
+    document.getElementById('retryBtn').addEventListener('click', loadImages);
+    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+    
+    document.getElementById('tagInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        addTag(e.target.value.trim());
+        e.target.value = '';
+      }
+    });
+    
+    document.getElementById('searchInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        loadImages();
+      }
+    });
+    
+    // Modal Events
+    document.getElementById('modalBackdrop').addEventListener('click', closeModal);
+    document.getElementById('modalClose').addEventListener('click', closeModal);
+    document.getElementById('prevImage').addEventListener('click', () => navigateModal(-1));
+    document.getElementById('nextImage').addEventListener('click', () => navigateModal(1));
+    document.getElementById('sizeSelect').addEventListener('change', updateModalContent);
+    
+    document.getElementById('modalDownload').addEventListener('click', () => {
+      const img = state.images[state.currentIndex];
+      if (img) {
+        const link = document.createElement('a');
+        link.href = img.urls.original || Object.values(img.urls)[0];
+        link.download = `${img.title}_${img.pid}.${img.ext}`;
+        link.target = '_blank';
+        link.click();
+      }
+    });
+    
+    document.getElementById('modalFavorite').addEventListener('click', () => {
+      const img = state.images[state.currentIndex];
+      if (img) {
+        toggleFavorite(img.pid);
+        updateModalContent();
+      }
+    });
+    
+    // R18 Modal
+    document.getElementById('r18Confirm').addEventListener('click', () => {
+      state.r18Confirmed = true;
+      localStorage.setItem('setu_r18_confirmed', 'true');
+      elements.r18Modal.classList.add('hidden');
+      loadImages();
+    });
+    
+    document.getElementById('r18Cancel').addEventListener('click', () => {
+      elements.r18Modal.classList.add('hidden');
+    });
+    
+    // Keyboard Navigation
+    document.addEventListener('keydown', (e) => {
+      if (!elements.imageModal.classList.contains('hidden')) {
+        switch (e.key) {
+          case 'ArrowLeft':
+            navigateModal(-1);
+            break;
+          case 'ArrowRight':
+            navigateModal(1);
+            break;
+          case 'Escape':
+            closeModal();
+            break;
+        }
+      }
+    });
+    
+    // Initialize
+    function init() {
+      document.documentElement.classList.toggle('dark', state.theme === 'dark');
+      
+      if (!state.r18Confirmed) {
+        elements.r18Modal.classList.remove('hidden');
+      } else {
+        loadImages();
+      }
+    }
+    
+    init();
+  </script>
+</body>
+</html>
